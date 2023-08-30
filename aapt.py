@@ -8,15 +8,17 @@ def aapt(file):
         aapt_path = os.path.join(root, 'bin', sys.platform, 'aapt_64')
         
         command = [aapt_path, 'dump', 'badging', file]
-        process = sp.Popen(command, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+        process = sp.Popen(command, stdout=sp.PIPE, stderr=sp.STDOUT, text=True, encoding='utf-8')
 
         for line in process.stdout:
             if "Invalid file" in line:
                 raise Exception('Invalid file')
             yield line.strip()
 
+    except UnicodeDecodeError:
+        pass
     except Exception as e:
-        yield e
+        pass
 
 
 class APK:
@@ -41,7 +43,7 @@ class APK:
 
             elif line.startswith('application-icon-'):
                 self._app_icon = line.split(':')[1].strip()
-    
+        
 
     @property
     def file(self):
