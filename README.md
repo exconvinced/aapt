@@ -14,6 +14,10 @@ from aapt import aapt, APK
     ```py
     apk = APK('/path/to/file.apk')
 
+    print(apk)                      # TikTube
+                                    # com.zhinglong.android.tiktube
+                                    # 12.34.56
+
     print(apk.package_name)         # com.zhinglong.android.tiktube
     print(apk.version_name)         # 0.69.420
     print(apk.version_code)         # 1234567890
@@ -21,19 +25,17 @@ from aapt import aapt, APK
     print(apk.app_label)            # TikTube
     print(apk.app_icon)             # path/to/some_icon.xml
 
-    print(apk)                      # TikTube
-                                    # com.zhinglong.android.tiktube
-                                    # 12.34.56
-
     ```
+
+
 #### Directory
-```py
-# Linux
+```md
+<!-- Linux -->
 /bin/linux/aapt_64
 
-# Windows
+<!-- Windows -->
 /bin/win32/aapt_64
 
-# Mac OS
+<!-- Mac OS -->
 /bin/darwin/aapt_64
 ```
