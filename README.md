@@ -30,12 +30,12 @@ from aapt import aapt, APK
 
 #### Directory
 ```md
-<!-- Linux -->
+# Linux
 /bin/linux/aapt_64
 
-<!-- Windows -->
+# Windows
 /bin/win32/aapt_64
 
-<!-- Mac OS -->
+# Mac OS
 /bin/darwin/aapt_64
 ```
