@@ -1,112 +1,113 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-'''
-File: /aapt.py
-Project: aapt
-Description:
-Created By: Tao.Hu 2019-07-08
------
-Last Modified: 2019-07-08 02:01:41 pm
-Modified By: Tao.Hu
------
-'''
-
-import os
-import re
-import stat
-import subprocess
-import platform
-import io
+import subprocess as sp
+import sys, os, re
 
 
-def aapt(args='--help'):
+def aapt(file):
     try:
-        # Darwin: macOS Linux Windows
-        system_name = platform.system()
-        if (system_name != 'Darwin' and system_name != 'Linux' and system_name != 'Windows'):
-            raise TypeError('unknown system type, only support Darwin、Linux、Windows')
+        root = os.path.dirname(__file__)
+        aapt_path = os.path.join(root, 'bin', sys.platform, 'aapt_64')
+        
+        command = [aapt_path, 'dump', 'badging', file]
+        process = sp.Popen(command, stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
 
-        aapt_path = os.path.join(os.path.dirname(__file__), 'bin', system_name, 'aapt_64')
-        if system_name == 'Windows':
-            aapt_path += '.exe'
+        for line in process.stdout:
+            if "Invalid file" in line:
+                raise Exception('Invalid file')
+            yield line.strip()
 
-        if (system_name != 'Windows' and os.access(aapt_path, os.X_OK) is not True):
-            os.chmod(aapt_path, stat.S_IRWXU)
-
-        out = subprocess.getoutput(aapt_path + ' ' + args)
-        return out
     except Exception as e:
-        print('aapt error:', e)
-        raise e
+        yield e
 
 
-def ls(file_path):
-    return aapt('l ' + file_path)
+class APK:
+    def __init__(self, file):
+        if not aapt(file):
+            raise Exception('Invalid file')
+        
+        self._file = file
+        self._recommended_version = None
 
+        for line in aapt(file):
+            if line.startswith('package:'):
+                self._package_name = re.search(r"name='(.+?)'", line).group(1)
+                self._version_name = re.search(r"versionName='(.+?)'", line).group(1)
+                self._version_code = re.search(r"versionCode='(.+?)'", line).group(1)
 
-def dump(file_path, values):
-    return aapt('d ' + values + ' ' + file_path)
+            elif line.startswith('application-label:'):
+                self._app_label = line.split(':')[1].strip("'")
 
+            elif line.startswith('sdkVersion:'):
+                self._target_sdk_version = line.split(':')[1].strip()
 
-def packagecmd(file_path, command):
-    return aapt('p ' + command + ' ' + file_path)
+            elif line.startswith('application-icon-'):
+                self._app_icon = line.split(':')[1].strip()
+    
 
+    @property
+    def file(self):
+        return self._file
+    
+    @property
+    def package_name(self):
+        return self._package_name
+    
+    @property
+    def version_name(self):
+        return self._version_name
+    
+    @property
+    def version_code(self):
+        return self._version_code
+    
+    @property
+    def app_label(self):
+        return self._app_label
+    
+    @property
+    def target_sdk_version(self):
+        return self._target_sdk_version
+    
+    @property
+    def app_icon(self):
+        return self._app_icon
+    
+    @property
+    def recommended_version(self):
+        return self._recommended_version
 
-def remove(file_path, files):
-    return aapt('r ' + file_path + ' ' + files)
+    def __str__(self) -> str:
+        return f"{self.app_label}\n{self.package_name}\n{self.version_name}"
 
+    @file.setter
+    def file(self, _):
+        raise AttributeError("Invalid access: cannot be modified")
 
-def add(file_path, files):
-    return aapt('a ' + file_path + ' ' + files)
+    @package_name.setter    
+    def package_name(self, _):
+        raise AttributeError("Invalid access: cannot be modified")
 
+    @version_name.setter    
+    def version_name(self, _):
+        raise AttributeError("Invalid access: cannot be modified")
 
-def crunch(resource, output_folder):
-    return aapt('c -S ' + resource + ' -C ' + output_folder)
+    @version_code.setter    
+    def version_code(self, _):
+        raise AttributeError("Invalid access: cannot be modified")
 
+    @app_label.setter    
+    def app_label(self, _):
+        raise AttributeError("Invalid access: cannot be modified")
 
-def single_crunch(input_file, output_file):
-    return aapt('s -i ' + input_file + ' -o ' + output_file)
+    @target_sdk_version.setter    
+    def target_sdk_version(self, _):
+        raise AttributeError("Invalid access: cannot be modified")
 
+    @app_icon.setter    
+    def app_icon(self, _):
+        raise AttributeError("Invalid access: cannot be modified")
 
-def version():
-    return aapt('v')
+    @recommended_version.setter    
+    def recommended_version(self, value):
+        self._recommended_version = value
 
-
-def get_apk_info(file_path):
-    try:
-        stdout = dump(file_path, 'badging')
-        match = re.compile("package: name='(\\S+)' versionCode='(\\d+)' versionName='(\\S+)'").match(stdout)
-        if not match:
-            raise Exception("can't get packageinfo")
-        package_name = match.group(1)
-        version_code = match.group(2)
-        version_name = match.group(3)
-        match = re.compile("application: label='([\u4e00-\u9fa5_a-zA-Z0-9-\\S]+)'").search(stdout)
-        app_name = match.group(1)
-        match = re.compile("application: label='([\u4e00-\u9fa5_a-zA-Z0-9-\\S]+)' icon='(\\S+)'").search(stdout)
-        icon_path = (match and match.group(2)) or None
-        return {
-            'package_name': package_name,
-            'version_code': version_code,
-            'version_name': version_name,
-            'app_name': app_name,
-            'icon_path': icon_path,
-        }
-    except Exception as e:
-        raise e
-
-
-def get_apk_and_icon(file_path):
-    try:
-        apkInfo = get_apk_info(file_path)
-        if (apkInfo['icon_path']):
-            out = subprocess.check_output('unzip' + ' -p ' + file_path + ' ' + apkInfo['icon_path'], shell=True)
-            byte_stream = io.BytesIO(out)
-            apkInfo['icon_byte_value'] = byte_stream.getvalue()
-            byte_stream.close()
-        else:
-            apkInfo['icon_byte_value'] = None
-        return apkInfo
-    except Exception as e:
-        raise e
+    
